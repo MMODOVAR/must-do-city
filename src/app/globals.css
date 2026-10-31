@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #1c1917;
+  --color-sand: #faf7f2;
+  --color-clay: #c2410c;
+  --color-clay-dark: #9a3412;
+  --color-sea: #0f766e;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces Variable", Georgia, serif;
+}
+
+body {
+  background: var(--color-sand);
+  color: var(--color-ink);
+}
+
+/* ---------- admin form primitives ---------- */
+@utility input {
+  @apply w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition focus:border-clay focus:ring-2 focus:ring-clay/20;
+}
+@utility label {
+  @apply mb-1 block text-sm font-medium text-stone-700;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-60;
+}
+@utility btn-primary {
+  @apply btn bg-clay text-white hover:bg-clay-dark;
+}
+@utility btn-ghost {
+  @apply btn border border-stone-300 bg-white text-stone-700 hover:bg-stone-50;
+}
+@utility btn-danger {
+  @apply btn border border-red-200 bg-white text-red-700 hover:bg-red-50;
+}
+@utility card {
+  @apply rounded-xl border border-stone-200 bg-white shadow-sm;
+}
