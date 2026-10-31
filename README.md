@@ -2,7 +2,7 @@
 
 A travel-experience website with an administrator back office. Admins configure **countries → cities → journeys** (experiences), and each journey is an ordered list of **steps** (stops). Visitors browse destinations and follow journeys step by step.
 
-Built with **Next.js 15 (App Router)**, **Prisma 6** (Rust-free client), **SQLite** for local development, and **Tailwind CSS 4**.
+Built with **Next.js 15 (App Router)**, **Prisma 6**, **SQLite** for local development, and **Tailwind CSS 4**.
 
 ## Features
 
@@ -84,8 +84,7 @@ prisma/
 - Set a strong `AUTH_SECRET` and change the admin password.
 - SQLite is fine for a single server. For serverless hosting (e.g. Vercel), use Postgres:
   1. Change `provider = "postgresql"` in `prisma/schema.prisma`
-  2. `npm i @prisma/adapter-pg` and swap `PrismaBetterSQLite3` for `PrismaPg` in `src/lib/db.ts`
-  3. Recreate migrations with `npx prisma migrate dev --name init`
+  2. Recreate migrations with `npx prisma migrate dev --name init`
 
 ## Ideas / roadmap
 
