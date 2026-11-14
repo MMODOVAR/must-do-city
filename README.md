@@ -87,7 +87,7 @@ docs/ARCHITECTURE.md    how the modules fit together
 - SQLite is fine for a single server. For serverless hosting (e.g. Vercel), use Postgres:
   1. Change `provider = "postgresql"` in `prisma/schema.prisma`
   2. Recreate migrations with `npx prisma migrate dev --name init`
-- Map tiles default to CARTO's free basemap. For real traffic, set `NEXT_PUBLIC_MAP_TILE_URL` to your own provider (see `.env.example`).
+- Map tiles default to OpenStreetMap (no API key; falls back to Esri if OSM tiles fail). OSM's public tiles are for light use only, so for real traffic set `NEXT_PUBLIC_MAP_TILE_URL` to your own provider (see `.env.example`).
 - Booking requests are stored and managed in the admin. Sending emails and taking payments are not wired up yet.
 
 ## Ideas / roadmap
