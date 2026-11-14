@@ -1,8 +1,8 @@
 "use client";
 
-import { useFormAction } from "@/components/admin/useFormAction";
-import { login } from "../actions";
-import { Field, FormError, SubmitButton } from "@/components/admin/ui";
+import { useFormAction } from "@/modules/shared/admin/useFormAction";
+import { login } from "@/modules/identity/actions";
+import { Field, FormError, SubmitButton } from "@/modules/shared/admin/ui";
 
 export function LoginForm({ next }: { next?: string }) {
   const { state, onSubmit, pending } = useFormAction(login);

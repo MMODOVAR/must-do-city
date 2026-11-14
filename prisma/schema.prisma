@@ -1,6 +1,16 @@
-// Must Do City data model
-// Country -> City -> Journey (experience) -> JourneyStep
+// Must Do City data model — local experiences hosted by locals.
+//
+// Bounded contexts (see docs/ARCHITECTURE.md):
+//   Identity    Admin
+//   Geography   Country 1─* City            (cities carry map coordinates / hotspot flag)
+//   Hosts       City 1─* Host               (the locals who run experiences)
+//   Catalog     Category, Experience 1─* ExperienceStep
+//   Reviews     Experience 1─* Review       (verified guests only, via a booking)
+//   Bookings    Experience 1─* Booking      (booking requests and their lifecycle)
+//
 // SQLite for local dev. Switch provider to "postgresql" for production.
+// List-like fields (languages, highlights…) are stored as newline/comma separated
+// text so the schema works on SQLite; the domain layer parses them.
 
 generator client {
   provider = "prisma-client-js"
@@ -11,6 +21,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/* ============================================================ Identity */
+
 model Admin {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -19,13 +31,17 @@ model Admin {
   createdAt    DateTime @default(now())
 }
 
+/* =========================================================== Geography */
+
 model Country {
   id          String   @id @default(cuid())
   name        String
   slug        String   @unique
-  isoCode     String?  // e.g. "LB", "FR"
+  isoCode     String? // e.g. "LB", "FR"
   description String?
   imageUrl    String?
+  latitude    Float?
+  longitude   Float?
   published   Boolean  @default(true)
   cities      City[]
   createdAt   DateTime @default(now())
@@ -33,50 +49,147 @@ model Country {
 }
 
 model City {
-  id          String    @id @default(cuid())
+  id          String       @id @default(cuid())
   name        String
   slug        String
+  tagline     String? // short hook shown on the map, e.g. "Mezze, sea & nightlife"
   description String?
   imageUrl    String?
-  published   Boolean   @default(true)
+  latitude    Float?
+  longitude   Float?
+  isHotspot   Boolean      @default(false) // highlighted on the landing-page map
+  published   Boolean      @default(true)
   countryId   String
-  country     Country   @relation(fields: [countryId], references: [id], onDelete: Cascade)
-  journeys    Journey[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  country     Country      @relation(fields: [countryId], references: [id], onDelete: Cascade)
+  hosts       Host[]
+  experiences Experience[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   @@unique([countryId, slug])
 }
 
-model Journey {
-  id            String        @id @default(cuid())
-  title         String
-  slug          String
-  summary       String?
-  description   String?
-  category      String?       // e.g. Food, Culture, Nature, Nightlife, Adventure
-  durationHours Float?
-  price         Float?
-  currency      String        @default("USD")
-  imageUrl      String?
-  featured      Boolean       @default(false)
-  published     Boolean       @default(true)
-  cityId        String
-  city          City          @relation(fields: [cityId], references: [id], onDelete: Cascade)
-  steps         JourneyStep[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+/* =============================================================== Hosts */
 
-  @@unique([cityId, slug])
+model Host {
+  id                String       @id @default(cuid())
+  name              String
+  slug              String       @unique
+  tagline           String? // "Chef & market lover"
+  bio               String?
+  avatarUrl         String?
+  languages         String? // comma separated: "English, French, Arabic"
+  verified          Boolean      @default(false)
+  responseTimeHours Int?
+  memberSince       DateTime     @default(now())
+  published         Boolean      @default(true)
+  cityId            String
+  city              City         @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  experiences       Experience[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 }
 
-model JourneyStep {
-  id          String  @id @default(cuid())
-  order       Int
-  title       String
+/* ============================================================= Catalog */
+
+model Category {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  icon        String? // an emoji, e.g. "🍜"
   description String?
-  location    String?
-  duration    String? // free text, e.g. "45 min"
-  journeyId   String
-  journey     Journey @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  sortOrder   Int          @default(0)
+  experiences Experience[]
+}
+
+model Experience {
+  id                 String           @id @default(cuid())
+  title              String
+  slug               String           @unique
+  summary            String?
+  description        String?
+  durationHours      Float?
+  price              Float?
+  currency           String           @default("USD")
+  pricingType        String           @default("PER_PERSON") // PER_PERSON | PER_GROUP
+  maxGroupSize       Int?
+  languages          String? // comma separated
+  isPrivate          Boolean          @default(true) // private tour, just you and your group
+  highlights         String? // one per line
+  included           String? // one per line
+  notIncluded        String? // one per line
+  meetingPoint       String?
+  latitude           Float?
+  longitude          Float?
+  cancellationPolicy String?
+  imageUrl           String?
+  featured           Boolean          @default(false)
+  published          Boolean          @default(true)
+  // Denormalised rating, maintained by the reviews module.
+  ratingAverage      Float            @default(0)
+  reviewCount        Int              @default(0)
+  cityId             String
+  city               City             @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  hostId             String?
+  host               Host?            @relation(fields: [hostId], references: [id], onDelete: SetNull)
+  categoryId         String?
+  category           Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  steps              ExperienceStep[]
+  reviews            Review[]
+  bookings           Booking[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+}
+
+model ExperienceStep {
+  id           String     @id @default(cuid())
+  order        Int
+  title        String
+  description  String?
+  location     String?
+  duration     String? // free text, e.g. "45 min"
+  experienceId String
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+}
+
+/* ============================================================= Reviews */
+
+model Review {
+  id            String     @id @default(cuid())
+  rating        Int // 1..5
+  title         String?
+  comment       String
+  authorName    String
+  authorCountry String?
+  published     Boolean    @default(true)
+  experienceId  String
+  experience    Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  // A guest review is tied to the booking that proves the guest took part.
+  bookingId     String?    @unique
+  booking       Booking?   @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  createdAt     DateTime   @default(now())
+}
+
+/* ============================================================ Bookings */
+
+model Booking {
+  id           String     @id @default(cuid())
+  reference    String     @unique // shown to the guest, e.g. "MDC-7K2QX9"
+  status       String     @default("PENDING") // PENDING | CONFIRMED | DECLINED | CANCELLED | COMPLETED
+  date         DateTime
+  guests       Int
+  totalPrice   Float?
+  currency     String     @default("USD")
+  guestName    String
+  guestEmail   String
+  guestPhone   String?
+  message      String?
+  adminNote    String?
+  experienceId String
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+  review       Review?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([status])
 }
