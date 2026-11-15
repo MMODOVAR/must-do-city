@@ -2,8 +2,14 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/modules/shared/db";
 
 export const reviewsRepository = {
-  publishedFor: (experienceId: string, take: number) =>
-    prisma.review.findMany({ where: { experienceId, published: true }, orderBy: { createdAt: "desc" }, take }),
+  publishedFor: async (experienceId: string, opts: { rating?: number; orderBy: Prisma.ReviewOrderByWithRelationInput[]; take: number }) => {
+    const where = { experienceId, published: true, ...(opts.rating ? { rating: opts.rating } : {}) };
+    const [reviews, total] = await Promise.all([
+      prisma.review.findMany({ where, orderBy: opts.orderBy, take: opts.take }),
+      prisma.review.count({ where }),
+    ]);
+    return { reviews, total };
+  },
   publishedRatings: async (experienceId: string) =>
     (await prisma.review.findMany({ where: { experienceId, published: true }, select: { rating: true } })).map((r) => r.rating),
   latestPublished: (take: number) =>

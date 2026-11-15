@@ -119,8 +119,11 @@ model Experience {
   included           String? // one per line
   notIncluded        String? // one per line
   meetingPoint       String?
-  latitude           Float?
+  latitude           Float? // meeting-point location
   longitude          Float?
+  startTime          String? // e.g. "10:00"
+  endPoint           String? // where the experience ends; empty = back at the meeting point
+  additionalInfo     String? // one per line: accessibility, confirmation, what to bring…
   cancellationPolicy String?
   imageUrl           String?
   featured           Boolean          @default(false)
@@ -135,6 +138,7 @@ model Experience {
   categoryId         String?
   category           Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   steps              ExperienceStep[]
+  photos             ExperiencePhoto[]
   reviews            Review[]
   bookings           Booking[]
   createdAt          DateTime         @default(now())
@@ -148,8 +152,22 @@ model ExperienceStep {
   description  String?
   location     String?
   duration     String? // free text, e.g. "45 min"
+  latitude     Float? // shown as a numbered stop on the itinerary map
+  longitude    Float?
+  admission    String? // INCLUDED | FREE | NOT_INCLUDED | PASS_BY
   experienceId String
   experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+}
+
+model ExperiencePhoto {
+  id           String     @id @default(cuid())
+  url          String
+  caption      String?
+  order        Int
+  experienceId String
+  experience   Experience @relation(fields: [experienceId], references: [id], onDelete: Cascade)
+
+  @@index([experienceId, order])
 }
 
 /* ============================================================= Reviews */

@@ -68,6 +68,7 @@ export const experiencesRepository = {
         ...cardInclude,
         host: true,
         steps: { orderBy: { order: "asc" } },
+        photos: { orderBy: { order: "asc" } },
       },
     }),
 
@@ -111,7 +112,10 @@ export const experiencesRepository = {
       include: { city: { include: { country: true } }, host: true, category: true, _count: { select: { steps: true, bookings: true } } },
     }),
   byId: (id: string) =>
-    prisma.experience.findUnique({ where: { id }, include: { steps: { orderBy: { order: "asc" } }, city: { include: { country: true } } } }),
+    prisma.experience.findUnique({
+      where: { id },
+      include: { steps: { orderBy: { order: "asc" } }, photos: { orderBy: { order: "asc" } }, city: { include: { country: true } } },
+    }),
   options: () =>
     prisma.experience.findMany({ orderBy: { title: "asc" }, select: { id: true, title: true, city: { select: { name: true } } } }),
   recent: (take: number) => prisma.experience.findMany({ orderBy: { updatedAt: "desc" }, take, include: { city: true } }),
@@ -121,10 +125,11 @@ export const experiencesRepository = {
   },
 
   create: (data: Prisma.ExperienceUncheckedCreateInput) => prisma.experience.create({ data }),
-  /** Replace all steps in the same transaction as the update. */
+  /** Replace all steps and photos in the same transaction as the update. */
   update: (id: string, data: Prisma.ExperienceUncheckedUpdateInput) =>
     prisma.$transaction([
       prisma.experienceStep.deleteMany({ where: { experienceId: id } }),
+      prisma.experiencePhoto.deleteMany({ where: { experienceId: id } }),
       prisma.experience.update({ where: { id }, data }),
     ]),
   delete: (id: string) => prisma.experience.delete({ where: { id } }),

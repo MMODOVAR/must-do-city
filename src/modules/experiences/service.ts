@@ -31,7 +31,7 @@ export const experiencesService = {
   options: async () => (await repo.options()).map((e) => ({ value: e.id, label: `${e.title} (${e.city.name})` })),
 
   async save(id: string | null, input: ExperienceInput) {
-    const { steps, ...fields } = input;
+    const { steps, photos, ...fields } = input;
     if (fields.featured && !fields.published) throw new DomainError("A featured experience must also be published.");
     const data = { ...fields, slug: slugify(fields.slug ?? fields.title) };
     const stepRows = steps.map((s, i) => ({
@@ -40,9 +40,14 @@ export const experiencesService = {
       description: s.description || null,
       location: s.location || null,
       duration: s.duration || null,
+      latitude: s.latitude,
+      longitude: s.longitude,
+      admission: s.admission,
     }));
-    if (id) await repo.update(id, { ...data, steps: { create: stepRows } });
-    else await repo.create({ ...data, steps: { create: stepRows } });
+    const photoRows = photos.map((p, i) => ({ order: i + 1, url: p.url, caption: p.caption || null }));
+    const nested = { steps: { create: stepRows }, photos: { create: photoRows } };
+    if (id) await repo.update(id, { ...data, ...nested });
+    else await repo.create({ ...data, ...nested });
   },
   delete: repo.delete,
   setRating: repo.setRating,

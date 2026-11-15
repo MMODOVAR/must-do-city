@@ -1,28 +1,12 @@
 "use client";
 
 import "leaflet/dist/leaflet.css";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
-import { MapContainer, Marker, Popup, TileLayer, ZoomControl, useMap } from "react-leaflet";
+import { MapContainer, Marker, Popup, ZoomControl, useMap } from "react-leaflet";
+import { TileLayerWithFallback } from "@/modules/shared/map/TileLayerWithFallback";
 import Link from "next/link";
 import type { MapCity } from "../domain";
-
-/**
- * Map tiles. Defaults need no API key: OpenStreetMap, with Esri as an automatic
- * fallback if OSM tiles fail to load. Set NEXT_PUBLIC_MAP_TILE_URL (and
- * NEXT_PUBLIC_MAP_ATTRIBUTION) to use your own provider in production.
- */
-const OSM = "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors";
-const TILE_SOURCES = process.env.NEXT_PUBLIC_MAP_TILE_URL
-  ? [{ url: process.env.NEXT_PUBLIC_MAP_TILE_URL, attribution: process.env.NEXT_PUBLIC_MAP_ATTRIBUTION || OSM }]
-  : [
-      { url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", attribution: OSM },
-      {
-        url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
-        attribution: "Tiles &copy; Esri &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors",
-      },
-    ];
-const MAX_TILE_ERRORS = 4;
 
 export type Focus =
   | { kind: "world" }
@@ -74,17 +58,6 @@ export default function LeafletMap({
 }) {
   const all = useMemo(() => cities.map((c) => [c.lat, c.lng] as [number, number]), [cities]);
   const markers = useRef(new Map<string, L.Marker>());
-  const [source, setSource] = useState(0);
-  const tileErrors = useRef(0);
-  const tiles = TILE_SOURCES[source];
-
-  // Switch to the next tile provider if the current one keeps failing.
-  const onTileError = () => {
-    if (++tileErrors.current >= MAX_TILE_ERRORS && source < TILE_SOURCES.length - 1) {
-      tileErrors.current = 0;
-      setSource((s) => s + 1);
-    }
-  };
 
   // Open the popup of the selected city once the camera starts moving there.
   useEffect(() => {
@@ -103,7 +76,7 @@ export default function LeafletMap({
       attributionControl
     >
       <ZoomControl position="bottomright" />
-      <TileLayer key={tiles.url} url={tiles.url} attribution={tiles.attribution} maxZoom={19} eventHandlers={{ tileerror: onTileError }} />
+      <TileLayerWithFallback />
       <CameraController focus={focus} all={all} />
       {cities.map((c) => (
         <Marker

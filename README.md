@@ -14,7 +14,10 @@ The code is organised by business domain — see [docs/ARCHITECTURE.md](docs/ARC
 - Categories, trending hotspots, featured experiences, local hosts, recent reviews
 - Destinations: country → city pages with experiences, category filters and the city's hosts
 - **Experience search**: text, country, city, category, language, max price, sort, pagination
-- Experience page: highlights, itinerary, what's included, meeting point, cancellation policy, host, rating breakdown
+- Experience page laid out like a Viator tour page: **photo gallery** with full-screen viewer, badges (Top rated, Free cancellation…),
+  quick facts, overview & highlights, what's included, **meeting point / start time / end point**, **"What to expect" itinerary
+  with numbered stops on a side map** (route line, hover to highlight), additional info, cancellation policy, host,
+  and **reviews** with a clickable rating breakdown, star filter, sorting and "show more"
 - **Booking requests** with live price total (per person / per group) and a booking reference
 - **Verified reviews**: guests review with their booking reference once the experience is completed
 - Host profiles with languages, response time, rating and their experiences
@@ -23,7 +26,7 @@ The code is organised by business domain — see [docs/ARCHITECTURE.md](docs/ARC
 - Secure login (bcrypt-hashed passwords, signed HTTP-only session cookie, middleware-protected routes)
 - Dashboard with pending bookings and recent activity
 - **Bookings** inbox: confirm / decline / cancel / complete (only valid transitions are offered), internal notes
-- CRUD for **experiences** (with itinerary editor), **hosts**, **categories**, **cities** (coordinates + hotspot flag) and **countries**
+- CRUD for **experiences** (photo manager, itinerary editor with stop coordinates and admission), **hosts**, **categories**, **cities** (coordinates + hotspot flag) and **countries**
 - **Reviews** moderation: hide/publish, delete, add reviews collected elsewhere
 
 ## Getting started

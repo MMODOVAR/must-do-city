@@ -6,6 +6,7 @@
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 import { categories, countries, reviewPool, FREE_CANCEL } from "./seed/data";
+import { ADDITIONAL_INFO, cityImages, details } from "./seed/details";
 
 const prisma = new PrismaClient();
 
@@ -48,7 +49,7 @@ async function main() {
       : await prisma.country.create({ data: { slug: country.slug, ...countryData } });
 
     for (const city of country.cities) {
-      const cityData = { name: city.name, tagline: city.tagline, description: city.description, latitude: city.lat, longitude: city.lng };
+      const cityData = { name: city.name, tagline: city.tagline, description: city.description, latitude: city.lat, longitude: city.lng, imageUrl: cityImages[city.slug] ?? null };
       const existingCity = await prisma.city.findUnique({ where: { countryId_slug: { countryId: countryRow.id, slug: city.slug } } });
       const cityRow = existingCity
         ? await prisma.city.update({
@@ -85,11 +86,17 @@ async function main() {
           included: x.included.join("\n"),
           notIncluded: x.notIncluded?.join("\n") ?? null,
           meetingPoint: x.meetingPoint,
+          latitude: details[x.slug]?.meeting[0] ?? null,
+          longitude: details[x.slug]?.meeting[1] ?? null,
+          startTime: details[x.slug]?.startTime ?? null,
+          endPoint: details[x.slug]?.endPoint ?? null,
+          additionalInfo: ADDITIONAL_INFO.join("\n"),
+          imageUrl: details[x.slug]?.photos?.[0]?.url ?? null,
           cancellationPolicy: FREE_CANCEL,
           hostId: hostIds.get(x.host) ?? null,
           categoryId: categoryIds.get(x.category) ?? null,
         };
-        const existing = await prisma.experience.findUnique({ where: { slug: x.slug }, include: { _count: { select: { steps: true, reviews: true } } } });
+        const existing = await prisma.experience.findUnique({ where: { slug: x.slug }, include: { _count: { select: { steps: true, reviews: true, photos: true } }, steps: true } });
         const exp = existing
           ? await prisma.experience.update({ where: { id: existing.id }, data: onlyMissing(existing, fields) })
           : await prisma.experience.create({
@@ -98,7 +105,28 @@ async function main() {
 
         if (!existing || existing._count.steps === 0) {
           await prisma.experienceStep.createMany({
-            data: x.steps.map(([title, location, duration, description], i) => ({ experienceId: exp.id, order: i + 1, title, location, duration, description })),
+            data: x.steps.map(([title, location, duration, description, latitude, longitude, admission], i) => ({
+              experienceId: exp.id, order: i + 1, title, location, duration, description,
+              latitude: latitude ?? null, longitude: longitude ?? null, admission: admission ?? null,
+            })),
+          });
+        } else {
+          // Existing stops: only fill in missing map coordinates / admission, matched by title.
+          for (const step of existing.steps) {
+            const seed = x.steps.find(([title]) => title === step.title);
+            if (!seed) continue;
+            const [, , , , latitude, longitude, admission] = seed;
+            await prisma.experienceStep.update({
+              where: { id: step.id },
+              data: onlyMissing(step, { latitude: latitude ?? null, longitude: longitude ?? null, admission: admission ?? null }),
+            });
+          }
+        }
+
+        const photos = details[x.slug]?.photos ?? [];
+        if (photos.length && (!existing || existing._count.photos === 0)) {
+          await prisma.experiencePhoto.createMany({
+            data: photos.map((ph, i) => ({ experienceId: exp.id, order: i + 1, url: ph.url, caption: ph.caption ?? null })),
           });
         }
 

@@ -1,7 +1,7 @@
 import { DomainError } from "@/modules/shared/forms";
 import { bookingsService } from "@/modules/bookings/service";
 import { experiencesService } from "@/modules/experiences/service";
-import { aggregate, distribution } from "./domain";
+import { aggregate, distribution, REVIEWS_PAGE, type ReviewQuery } from "./domain";
 import { reviewsRepository as repo } from "./repository";
 import type { AdminReviewInput, GuestReviewInput } from "./schemas";
 
@@ -12,9 +12,18 @@ async function refreshRating(experienceId: string) {
 }
 
 export const reviewsService = {
-  async forExperience(experienceId: string, take = 20) {
-    const [reviews, ratings] = await Promise.all([repo.publishedFor(experienceId, take), repo.publishedRatings(experienceId)]);
-    return { reviews, distribution: distribution(ratings), ...aggregate(ratings) };
+  /** Overall rating summary plus one page of reviews, filtered and sorted. */
+  async forExperience(experienceId: string, query: ReviewQuery = { sort: "recent", take: REVIEWS_PAGE }) {
+    const orderBy = {
+      recent: [{ createdAt: "desc" as const }],
+      highest: [{ rating: "desc" as const }, { createdAt: "desc" as const }],
+      lowest: [{ rating: "asc" as const }, { createdAt: "desc" as const }],
+    }[query.sort];
+    const [page, ratings] = await Promise.all([
+      repo.publishedFor(experienceId, { rating: query.rating, orderBy, take: query.take }),
+      repo.publishedRatings(experienceId),
+    ]);
+    return { ...page, query, distribution: distribution(ratings), ...aggregate(ratings) };
   },
   latest: (take = 6) => repo.latestPublished(take),
 

@@ -3,7 +3,7 @@
  * local hosts, categories, experiences with itineraries, and guest reviews.
  */
 
-export type StepSeed = [title: string, location: string, duration: string, description: string];
+export type StepSeed = [title: string, location: string, duration: string, description: string, lat?: number, lng?: number, admission?: "INCLUDED" | "FREE" | "NOT_INCLUDED" | "PASS_BY"];
 
 export type ExperienceSeed = {
   slug: string;
@@ -21,6 +21,10 @@ export type ExperienceSeed = {
   included: string[];
   notIncluded?: string[];
   meetingPoint: string;
+  meetingLat?: number;
+  meetingLng?: number;
+  startTime?: string;
+  endPoint?: string;
   featured?: boolean;
   steps: StepSeed[];
 };
@@ -76,9 +80,9 @@ export const countries: CountrySeed[] = [
             included: ["All food tastings", "Fresh juice", "Bottled water"], notIncluded: ["Alcoholic drinks", "Hotel pick-up"],
             meetingPoint: "Mar Mikhael train station steps",
             steps: [
-              ["Breakfast manousheh", "Mar Mikhael", "30 min", "Za'atar and cheese flatbread straight from the oven."],
-              ["Gemmayzeh stairs", "St. Nicholas Stairs", "40 min", "Walk the art stairs and stop for fresh juice."],
-              ["Knefeh finale", "Downtown", "30 min", "Warm cheese pastry with orange-blossom syrup."],
+              ["Breakfast manousheh", "Mar Mikhael", "30 min", "Za'atar and cheese flatbread straight from the oven.", 33.8968, 35.5225],
+              ["Gemmayzeh stairs", "St. Nicholas Stairs", "40 min", "Walk the art stairs and stop for fresh juice.", 33.8946, 35.5178, "FREE"],
+              ["Knefeh finale", "Downtown", "30 min", "Warm cheese pastry with orange-blossom syrup.", 33.896, 35.5047],
             ],
           },
           {
@@ -88,8 +92,8 @@ export const countries: CountrySeed[] = [
             highlights: ["Golden hour at Pigeon Rocks", "Corn on the cob from a street cart", "The best photo spots on the seafront"],
             included: ["Local guide"], meetingPoint: "Ain El Mreisseh lighthouse",
             steps: [
-              ["Ain El Mreisseh", "Corniche", "45 min", "Join joggers, fishermen and families on the seafront promenade."],
-              ["Pigeon Rocks", "Raouché", "45 min", "Watch the sun drop behind Beirut's famous sea arches."],
+              ["Ain El Mreisseh", "Corniche", "45 min", "Join joggers, fishermen and families on the seafront promenade.", 33.901, 35.49, "FREE"],
+              ["Pigeon Rocks", "Raouché", "45 min", "Watch the sun drop behind Beirut's famous sea arches.", 33.8897, 35.47, "FREE"],
             ],
           },
           {
@@ -100,9 +104,9 @@ export const countries: CountrySeed[] = [
             included: ["First drink at each stop", "Mezze plates"], notIncluded: ["Taxi between stops"],
             meetingPoint: "Gemmayzeh, Rue Gouraud",
             steps: [
-              ["Sunset drinks", "Gemmayzeh", "1 h", "Start high above the old town as the lights come on."],
-              ["Arak & mezze", "Badaro", "1 h 30", "A family-run spot where locals spend whole evenings."],
-              ["Last call", "Mar Mikhael", "1 h 30", "Live music and the city's best late-night crowd."],
+              ["Sunset drinks", "Gemmayzeh", "1 h", "Start high above the old town as the lights come on.", 33.8952, 35.516],
+              ["Arak & mezze", "Badaro", "1 h 30", "A family-run spot where locals spend whole evenings.", 33.8748, 35.515],
+              ["Last call", "Mar Mikhael", "1 h 30", "Live music and the city's best late-night crowd.", 33.8975, 35.524],
             ],
           },
         ],
@@ -124,9 +128,9 @@ export const countries: CountrySeed[] = [
             included: ["Entry tickets", "Expert guiding"], notIncluded: ["Lunch"],
             meetingPoint: "Byblos Castle entrance",
             steps: [
-              ["Crusader Castle", "Byblos Citadel", "1 h", "Climb the 12th-century keep for views over the ruins."],
-              ["Old souk", "Historic centre", "45 min", "Fossil shops and stone-paved lanes."],
-              ["Harbour lunch", "Old Port", "1 h 30", "Grilled fish where Phoenician ships once docked."],
+              ["Crusader Castle", "Byblos Citadel", "1 h", "Climb the 12th-century keep for views over the ruins.", 34.1199, 35.6455, "INCLUDED"],
+              ["Old souk", "Historic centre", "45 min", "Fossil shops and stone-paved lanes.", 34.1215, 35.647, "FREE"],
+              ["Harbour lunch", "Old Port", "1 h 30", "Grilled fish where Phoenician ships once docked.", 34.1232, 35.644],
             ],
           },
         ],
@@ -155,9 +159,9 @@ export const countries: CountrySeed[] = [
             highlights: ["Visit a working artist's studio", "Award-winning croissant tasting", "Sacré-Cœur before the crowds"],
             included: ["Pastry tasting", "Studio visit"], meetingPoint: "Abbesses metro station",
             steps: [
-              ["Boulangerie stop", "Rue des Abbesses", "20 min", "Pick up a buttery croissant to go."],
-              ["Place du Tertre", "Montmartre", "45 min", "Watch painters at work in the old village square."],
-              ["Sacré-Cœur", "Butte Montmartre", "45 min", "The best free view over Paris."],
+              ["Boulangerie stop", "Rue des Abbesses", "20 min", "Pick up a buttery croissant to go.", 48.8846, 2.338],
+              ["Place du Tertre", "Montmartre", "45 min", "Watch painters at work in the old village square.", 48.8865, 2.3408, "FREE"],
+              ["Sacré-Cœur", "Butte Montmartre", "45 min", "The best free view over Paris.", 48.8867, 2.3431, "FREE"],
             ],
           },
           {
@@ -168,8 +172,8 @@ export const countries: CountrySeed[] = [
             included: ["6 cheeses", "4 glasses of wine", "Bread & charcuterie"], notIncluded: ["Gratuities"],
             meetingPoint: "Place des Vosges, north arcade",
             steps: [
-              ["Fromagerie visit", "Rue de Bretagne", "45 min", "Meet the affineurs and pick our cheeses."],
-              ["Cellar tasting", "Le Marais", "1 h 30", "Pair, sip and compare in a vaulted stone cellar."],
+              ["Fromagerie visit", "Rue de Bretagne", "45 min", "Meet the affineurs and pick our cheeses.", 48.863, 2.361],
+              ["Cellar tasting", "Le Marais", "1 h 30", "Pair, sip and compare in a vaulted stone cellar.", 48.8575, 2.359, "INCLUDED"],
             ],
           },
         ],
@@ -190,9 +194,9 @@ export const countries: CountrySeed[] = [
             highlights: ["Hidden Renaissance traboules", "Three-course bouchon lunch", "Praline tart at the best pâtisserie"],
             included: ["Lunch with wine", "Pastry"], meetingPoint: "Saint-Jean Cathedral",
             steps: [
-              ["Traboules walk", "Vieux Lyon", "1 h 15", "Slip through the silk-weavers' secret passages."],
-              ["Bouchon lunch", "Rue Saint-Jean", "1 h 30", "Quenelles, saucisson brioché and a pot of Beaujolais."],
-              ["Praline tart", "Presqu'île", "30 min", "Lyon's pink, sugary signature."],
+              ["Traboules walk", "Vieux Lyon", "1 h 15", "Slip through the silk-weavers' secret passages.", 45.763, 4.8275, "FREE"],
+              ["Bouchon lunch", "Rue Saint-Jean", "1 h 30", "Quenelles, saucisson brioché and a pot of Beaujolais.", 45.762, 4.827],
+              ["Praline tart", "Presqu'île", "30 min", "Lyon's pink, sugary signature.", 45.764, 4.834],
             ],
           },
         ],
@@ -219,9 +223,9 @@ export const countries: CountrySeed[] = [
             highlights: ["10 tastings incl. wine", "Family-run trattoria", "Artisan gelato"], included: ["All food", "2 glasses of wine"],
             meetingPoint: "Piazza di Santa Maria in Trastevere fountain",
             steps: [
-              ["Supplì stop", "Via di San Francesco a Ripa", "20 min", "Rome's fried rice ball, molten mozzarella inside."],
-              ["Trattoria", "Trastevere", "1 h 15", "Cacio e pepe and carbonara, side by side."],
-              ["Gelato", "Piazza Trilussa", "20 min", "The real thing — no neon mountains of ice cream."],
+              ["Supplì stop", "Via di San Francesco a Ripa", "20 min", "Rome's fried rice ball, molten mozzarella inside.", 41.8865, 12.473],
+              ["Trattoria", "Trastevere", "1 h 15", "Cacio e pepe and carbonara, side by side.", 41.8895, 12.47],
+              ["Gelato", "Piazza Trilussa", "20 min", "The real thing — no neon mountains of ice cream.", 41.8922, 12.47],
             ],
           },
           {
@@ -231,9 +235,9 @@ export const countries: CountrySeed[] = [
             highlights: ["Private guide for your group", "Lesser-known ruins", "Best views of the Forum"], included: ["Private guide"], notIncluded: ["Entry tickets"],
             meetingPoint: "Colosseo metro exit",
             steps: [
-              ["Colosseum outside", "Piazza del Colosseo", "45 min", "Gladiators, emperors and the real story."],
-              ["Palatine views", "Via di San Gregorio", "1 h", "Where Rome began."],
-              ["Hidden ruins", "Largo di Torre Argentina", "45 min", "Where Caesar fell — and where cats now rule."],
+              ["Colosseum outside", "Piazza del Colosseo", "45 min", "Gladiators, emperors and the real story.", 41.8902, 12.4922, "PASS_BY"],
+              ["Palatine views", "Via di San Gregorio", "1 h", "Where Rome began.", 41.8892, 12.4875, "PASS_BY"],
+              ["Hidden ruins", "Largo di Torre Argentina", "45 min", "Where Caesar fell — and where cats now rule.", 41.8955, 12.4768, "FREE"],
             ],
           },
         ],
@@ -254,8 +258,8 @@ export const countries: CountrySeed[] = [
             highlights: ["Make a wallet to take home", "Traditional Florentine tools", "Espresso in the workshop"], included: ["Materials", "Tools", "Espresso"],
             meetingPoint: "Piazza Santo Spirito",
             steps: [
-              ["Choose your leather", "Oltrarno workshop", "20 min", "Feel the difference between hides and pick yours."],
-              ["Cut & stitch", "Workshop bench", "1 h 45", "Saddle-stitch your wallet by hand."],
+              ["Choose your leather", "Oltrarno workshop", "20 min", "Feel the difference between hides and pick yours.", 43.7665, 11.247],
+              ["Cut & stitch", "Workshop bench", "1 h 45", "Saddle-stitch your wallet by hand.", 43.7662, 11.2476, "INCLUDED"],
             ],
           },
         ],
@@ -282,9 +286,9 @@ export const countries: CountrySeed[] = [
             highlights: ["4 bars, 10 tapas", "Vermouth on tap", "Gothic Quarter by night"], included: ["Tapas", "3 drinks"],
             meetingPoint: "Santa Maria del Mar basilica",
             steps: [
-              ["Vermouth hour", "El Born", "45 min", "Barcelona's favourite aperitif, straight from the barrel."],
-              ["Classic bodega", "Barri Gòtic", "1 h", "Patatas bravas and pan con tomate."],
-              ["Last tapa", "Plaça Reial", "45 min", "Crema catalana to finish."],
+              ["Vermouth hour", "El Born", "45 min", "Barcelona's favourite aperitif, straight from the barrel.", 41.3845, 2.182],
+              ["Classic bodega", "Barri Gòtic", "1 h", "Patatas bravas and pan con tomate.", 41.383, 2.1765],
+              ["Last tapa", "Plaça Reial", "45 min", "Crema catalana to finish.", 41.3801, 2.1754],
             ],
           },
           {
@@ -294,9 +298,9 @@ export const countries: CountrySeed[] = [
             highlights: ["Sagrada Família exterior story", "Hidden modernist gems", "Passeig de Gràcia icons"], included: ["Guide"], notIncluded: ["Entry tickets"],
             meetingPoint: "Plaça de Gaudí",
             steps: [
-              ["Sagrada Família", "Eixample", "1 h", "Read the façades like a book."],
-              ["Hidden gems", "Eixample", "1 h", "Buildings most visitors never notice."],
-              ["Casa Batlló", "Passeig de Gràcia", "45 min", "The dragon's back up close."],
+              ["Sagrada Família", "Eixample", "1 h", "Read the façades like a book.", 41.4036, 2.1744, "NOT_INCLUDED"],
+              ["Hidden gems", "Eixample", "1 h", "Buildings most visitors never notice.", 41.395, 2.162, "PASS_BY"],
+              ["Casa Batlló", "Passeig de Gràcia", "45 min", "The dragon's back up close.", 41.3916, 2.1649, "NOT_INCLUDED"],
             ],
           },
         ],
@@ -323,9 +327,9 @@ export const countries: CountrySeed[] = [
             highlights: ["Live fado with a singer as your host", "Sunset at a miradouro", "Cherry liqueur in a chocolate cup"], included: ["Fado house entry", "Ginjinha", "Petiscos"],
             meetingPoint: "Miradouro de Santa Luzia",
             steps: [
-              ["Miradouro", "Santa Luzia", "30 min", "Tiles, terracotta roofs and the river."],
-              ["Ginjinha", "Alfama", "20 min", "A sweet sour-cherry shot, the Lisbon way."],
-              ["Fado house", "Alfama", "2 h", "Petiscos and the voice of the city."],
+              ["Miradouro", "Santa Luzia", "30 min", "Tiles, terracotta roofs and the river.", 38.7115, -9.13, "FREE"],
+              ["Ginjinha", "Alfama", "20 min", "A sweet sour-cherry shot, the Lisbon way.", 38.712, -9.129],
+              ["Fado house", "Alfama", "2 h", "Petiscos and the voice of the city.", 38.711, -9.128, "INCLUDED"],
             ],
           },
         ],
@@ -352,9 +356,9 @@ export const countries: CountrySeed[] = [
             highlights: ["Artisans at work", "Spice tasting", "Rooftop mint tea over Jemaa el-Fnaa"], included: ["Tea", "Spice tasting"],
             meetingPoint: "Café de France, Jemaa el-Fnaa",
             steps: [
-              ["Spice souk", "Rahba Kedima", "45 min", "Saffron, ras el hanout and the art of bargaining."],
-              ["Artisans", "Souk Haddadine", "1 h", "Metalworkers, dyers and leather tanners."],
-              ["Rooftop tea", "Medina", "45 min", "Mint tea as the call to prayer rings out."],
+              ["Spice souk", "Rahba Kedima", "45 min", "Saffron, ras el hanout and the art of bargaining.", 31.631, -7.986, "FREE"],
+              ["Artisans", "Souk Haddadine", "1 h", "Metalworkers, dyers and leather tanners.", 31.633, -7.987, "FREE"],
+              ["Rooftop tea", "Medina", "45 min", "Mint tea as the call to prayer rings out.", 31.6258, -7.9891],
             ],
           },
           {
@@ -364,9 +368,9 @@ export const countries: CountrySeed[] = [
             highlights: ["Market shopping", "Cook in a family riad", "Recipes to take home"], included: ["Ingredients", "Lunch", "Recipes"],
             meetingPoint: "Bab Doukkala gate",
             steps: [
-              ["Market", "Bab Doukkala", "45 min", "Pick vegetables, spices and fresh bread."],
-              ["Cook", "Family riad", "2 h", "Chicken tagine with preserved lemon."],
-              ["Feast", "Riad courtyard", "1 h", "Eat together under the orange tree."],
+              ["Market", "Bab Doukkala", "45 min", "Pick vegetables, spices and fresh bread.", 31.635, -7.997],
+              ["Cook", "Family riad", "2 h", "Chicken tagine with preserved lemon.", 31.632, -7.993, "INCLUDED"],
+              ["Feast", "Riad courtyard", "1 h", "Eat together under the orange tree.", 31.6322, -7.9928],
             ],
           },
         ],
@@ -393,9 +397,9 @@ export const countries: CountrySeed[] = [
             highlights: ["3 izakayas locals love", "Golden Gai's tiny bars", "Sake 101"], included: ["Food at each stop", "3 drinks"],
             meetingPoint: "Shinjuku station, east exit",
             steps: [
-              ["Omoide Yokocho", "Shinjuku", "1 h", "Smoky yakitori under the tracks."],
-              ["Standing bar", "Kabukicho", "45 min", "Sake tasting with the master."],
-              ["Golden Gai", "Shinjuku", "1 h", "Six-seat bars, each a world of its own."],
+              ["Omoide Yokocho", "Shinjuku", "1 h", "Smoky yakitori under the tracks.", 35.693, 139.6996],
+              ["Standing bar", "Kabukicho", "45 min", "Sake tasting with the master.", 35.695, 139.702],
+              ["Golden Gai", "Shinjuku", "1 h", "Six-seat bars, each a world of its own.", 35.694, 139.7045],
             ],
           },
         ],
@@ -416,8 +420,8 @@ export const countries: CountrySeed[] = [
             highlights: ["Authentic tea room", "Make your own matcha", "Seasonal wagashi sweets"], included: ["Matcha", "Wagashi"],
             meetingPoint: "Gion Shijo station, exit 7",
             steps: [
-              ["Welcome", "Machiya house", "15 min", "The meaning of the tea room."],
-              ["Ceremony", "Tea room", "1 h", "Watch, then whisk your own bowl."],
+              ["Welcome", "Machiya house", "15 min", "The meaning of the tea room.", 35.0037, 135.775],
+              ["Ceremony", "Tea room", "1 h", "Watch, then whisk your own bowl.", 35.0039, 135.7754, "INCLUDED"],
             ],
           },
         ],
@@ -444,9 +448,9 @@ export const countries: CountrySeed[] = [
             highlights: ["Live jazz set", "Soul-food dinner", "Harlem Renaissance stories"], included: ["Dinner", "Club cover charge"], notIncluded: ["Drinks at the club"],
             meetingPoint: "Apollo Theater marquee",
             steps: [
-              ["Harlem walk", "125th Street", "45 min", "The Apollo, the Renaissance and the people."],
-              ["Soul food", "Lenox Ave", "1 h", "Fried chicken, collards and cornbread."],
-              ["Jazz club", "Harlem", "1 h 30", "A live set in an intimate room."],
+              ["Harlem walk", "125th Street", "45 min", "The Apollo, the Renaissance and the people.", 40.8099, -73.95, "PASS_BY"],
+              ["Soul food", "Lenox Ave", "1 h", "Fried chicken, collards and cornbread.", 40.811, -73.944],
+              ["Jazz club", "Harlem", "1 h 30", "A live set in an intimate room.", 40.815, -73.945, "INCLUDED"],
             ],
           },
         ],
@@ -473,9 +477,9 @@ export const countries: CountrySeed[] = [
             highlights: ["6 taco stops", "Mezcal tasting", "Street-art murals"], included: ["All tacos", "Mezcal tasting"],
             meetingPoint: "Glorieta de Insurgentes",
             steps: [
-              ["Al pastor", "Roma Norte", "30 min", "Spit-roasted pork with pineapple."],
-              ["Mercado", "Mercado Medellín", "1 h", "Market stalls and fresh salsas."],
-              ["Mezcal", "Condesa", "45 min", "Smoky agave spirits, sipped slowly."],
+              ["Al pastor", "Roma Norte", "30 min", "Spit-roasted pork with pineapple.", 19.417, -99.161],
+              ["Mercado", "Mercado Medellín", "1 h", "Market stalls and fresh salsas.", 19.409, -99.163],
+              ["Mezcal", "Condesa", "45 min", "Smoky agave spirits, sipped slowly.", 19.412, -99.173],
             ],
           },
         ],

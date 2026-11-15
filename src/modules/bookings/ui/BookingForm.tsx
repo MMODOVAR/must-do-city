@@ -14,6 +14,7 @@ type Props = {
   pricingType: string;
   maxGroupSize: number | null;
   priceText: string | null;
+  freeCancellation: boolean;
 };
 
 function tomorrow() {
@@ -22,7 +23,7 @@ function tomorrow() {
 }
 
 /** Booking request card shown on the experience page. */
-export function BookingForm({ experienceId, price, currency, pricingType, maxGroupSize, priceText }: Props) {
+export function BookingForm({ experienceId, price, currency, pricingType, maxGroupSize, priceText, freeCancellation }: Props) {
   const { state, onSubmit, pending } = useFormAction(requestBooking);
   const [guests, setGuests] = useState(2);
   const total = totalPrice(price, pricingType, guests);
@@ -41,8 +42,11 @@ export function BookingForm({ experienceId, price, currency, pricingType, maxGro
   return (
     <form onSubmit={onSubmit} className="card space-y-4 p-6">
       <div>
-        {priceText ? <p className="text-2xl font-bold">{priceText}</p> : <p className="text-lg font-semibold">Price on request</p>}
-        <p className="text-xs text-stone-500">Private experience · free cancellation per policy</p>
+        {priceText ? (
+          <p className="text-sm text-stone-600">{price ? "From " : ""}<span className="text-2xl font-bold text-ink">{priceText}</span></p>
+        ) : (
+          <p className="text-lg font-semibold">Price on request</p>
+        )}
       </div>
       <FormError error={state?.error} />
       <input type="hidden" name="experienceId" value={experienceId} />
@@ -71,7 +75,11 @@ export function BookingForm({ experienceId, price, currency, pricingType, maxGro
         </p>
       )}
       <SubmitButton pending={pending} className="btn-primary w-full">Request to book</SubmitButton>
-      <p className="text-center text-xs text-stone-500">You won&apos;t be charged yet — your host confirms first.</p>
+      <ul className="space-y-2 border-t border-stone-200 pt-4 text-sm text-stone-700">
+        {freeCancellation && <li>✅ <strong>Free cancellation</strong> — see the policy below</li>}
+        <li>✅ <strong>Request now, pay later</strong> — you won&apos;t be charged yet</li>
+        <li>✅ Your host confirms availability, usually within a day</li>
+      </ul>
     </form>
   );
 }

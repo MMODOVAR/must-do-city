@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import type { Experience, ExperienceStep } from "@prisma/client";
+import type { Experience, ExperiencePhoto, ExperienceStep } from "@prisma/client";
 import type { FormAction } from "@/modules/shared/forms";
 import { useFormAction } from "@/modules/shared/admin/useFormAction";
 import { CoordinatesFields } from "@/modules/shared/admin/CoordinatesFields";
 import { Checkbox, Field, FormError, Section, Select, SubmitButton } from "@/modules/shared/admin/ui";
-import { PRICING_TYPES } from "../domain";
+import { ADMISSION, PRICING_TYPES } from "../domain";
 
 type Opt = { value: string; label: string };
-type Step = { key: number; title: string; description: string; location: string; duration: string };
+type Step = { key: number; title: string; description: string; location: string; duration: string; latitude: string; longitude: string; admission: string };
+type Photo = { key: number; url: string; caption: string };
 
 let nextKey = 1;
 const toStep = (s?: Partial<ExperienceStep>): Step => ({
@@ -18,7 +19,20 @@ const toStep = (s?: Partial<ExperienceStep>): Step => ({
   description: s?.description ?? "",
   location: s?.location ?? "",
   duration: s?.duration ?? "",
+  latitude: s?.latitude?.toString() ?? "",
+  longitude: s?.longitude?.toString() ?? "",
+  admission: s?.admission ?? "",
 });
+const toPhoto = (p?: Partial<ExperiencePhoto>): Photo => ({ key: nextKey++, url: p?.url ?? "", caption: p?.caption ?? "" });
+
+/** Move item i by dir within a list (for the ↑ ↓ buttons). */
+function moved<T>(list: T[], i: number, dir: -1 | 1) {
+  const j = i + dir;
+  if (j < 0 || j >= list.length) return list;
+  const copy = [...list];
+  [copy[i], copy[j]] = [copy[j], copy[i]];
+  return copy;
+}
 
 export function ExperienceForm({
   action,
@@ -29,7 +43,7 @@ export function ExperienceForm({
   defaultCityId,
 }: {
   action: FormAction;
-  experience?: Experience & { steps: ExperienceStep[] };
+  experience?: Experience & { steps: ExperienceStep[]; photos: ExperiencePhoto[] };
   cities: Opt[];
   hosts: Opt[];
   categories: Opt[];
@@ -37,17 +51,12 @@ export function ExperienceForm({
 }) {
   const { state, onSubmit, pending } = useFormAction(action);
   const [steps, setSteps] = useState<Step[]>(() => (experience?.steps ?? []).map(toStep));
+  const [photos, setPhotos] = useState<Photo[]>(() => (experience?.photos ?? []).map(toPhoto));
   const e = experience;
 
   const update = (key: number, patch: Partial<Step>) => setSteps((s) => s.map((x) => (x.key === key ? { ...x, ...patch } : x)));
-  const move = (i: number, dir: -1 | 1) =>
-    setSteps((s) => {
-      const j = i + dir;
-      if (j < 0 || j >= s.length) return s;
-      const copy = [...s];
-      [copy[i], copy[j]] = [copy[j], copy[i]];
-      return copy;
-    });
+  const move = (i: number, dir: -1 | 1) => setSteps((s) => moved(s, i, dir));
+  const updatePhoto = (key: number, patch: Partial<Photo>) => setPhotos((p) => p.map((x) => (x.key === key ? { ...x, ...patch } : x)));
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
@@ -65,7 +74,28 @@ export function ExperienceForm({
         </div>
         <Field label="Summary" name="summary" maxLength={300} defaultValue={e?.summary ?? ""} placeholder="One line that sells the experience" />
         <Field label="Description" name="description" textarea rows={6} defaultValue={e?.description ?? ""} />
-        <Field label="Image URL" name="imageUrl" type="url" defaultValue={e?.imageUrl ?? ""} placeholder="https://…" />
+      </Section>
+
+      <Section title="Photos" description="The cover image appears on cards and first in the gallery. Add more photos for the gallery, in order.">
+        <Field label="Cover image URL" name="imageUrl" type="url" defaultValue={e?.imageUrl ?? ""} placeholder="https://…" />
+        {photos.length === 0 && <p className="text-sm text-stone-500">No gallery photos yet.</p>}
+        <ol className="space-y-3">
+          {photos.map((p, i) => (
+            <li key={p.key} className="flex flex-wrap items-center gap-3 rounded-lg border border-stone-200 bg-stone-50 p-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {p.url ? <img src={p.url} alt="" className="h-14 w-20 rounded object-cover" /> : <span className="flex h-14 w-20 items-center justify-center rounded bg-stone-200 text-xs text-stone-500">preview</span>}
+              <input className="input min-w-48 flex-[2]" placeholder="Photo URL (https://…) *" value={p.url} onChange={(ev) => updatePhoto(p.key, { url: ev.target.value })} />
+              <input className="input min-w-40 flex-1" placeholder="Caption" value={p.caption} onChange={(ev) => updatePhoto(p.key, { caption: ev.target.value })} />
+              <div className="flex gap-1">
+                <button type="button" className="btn-ghost px-2 py-1" onClick={() => setPhotos((x) => moved(x, i, -1))} disabled={i === 0} aria-label="Move photo up">↑</button>
+                <button type="button" className="btn-ghost px-2 py-1" onClick={() => setPhotos((x) => moved(x, i, 1))} disabled={i === photos.length - 1} aria-label="Move photo down">↓</button>
+                <button type="button" className="btn-danger px-2 py-1" onClick={() => setPhotos((x) => x.filter((y) => y.key !== p.key))} aria-label="Remove photo">✕</button>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <button type="button" className="btn-ghost" onClick={() => setPhotos((p) => [...p, toPhoto()])}>+ Add photo</button>
+        <input type="hidden" name="photos" value={JSON.stringify(photos.filter((p) => p.url.trim()).map((p) => ({ url: p.url, caption: p.caption })))} />
       </Section>
 
       <Section title="Price & group" description="How the experience is sold.">
@@ -89,12 +119,21 @@ export function ExperienceForm({
           <Field label="Included" name="included" textarea rows={4} defaultValue={e?.included ?? ""} placeholder={"All food tastings\nWater"} />
           <Field label="Not included" name="notIncluded" textarea rows={4} defaultValue={e?.notIncluded ?? ""} placeholder={"Alcoholic drinks\nHotel pick-up"} />
         </div>
+      </Section>
+
+      <Section title="Meeting point & logistics" description="Shown in the Meeting and pickup section; the meeting point is the Start pin on the itinerary map.">
         <Field label="Meeting point" name="meetingPoint" defaultValue={e?.meetingPoint ?? ""} placeholder="In front of St. Nicholas Stairs, Gemmayzeh" />
         <CoordinatesFields latitude={e?.latitude} longitude={e?.longitude} hint="Meeting-point location. Leave empty to use the city's." />
+        <div className="grid gap-5 sm:grid-cols-[160px_1fr]">
+          <Field label="Start time" name="startTime" defaultValue={e?.startTime ?? ""} placeholder="10:00" />
+          <Field label="End point" name="endPoint" defaultValue={e?.endPoint ?? ""} placeholder="Leave empty if it ends back at the meeting point" />
+        </div>
+        <Field label="Additional info" name="additionalInfo" textarea rows={4} defaultValue={e?.additionalInfo ?? ""}
+          placeholder={"Confirmation within 24 hours\nNot wheelchair accessible\nComfortable shoes recommended"} hint="One item per line." />
         <Field label="Cancellation policy" name="cancellationPolicy" textarea rows={2} defaultValue={e?.cancellationPolicy ?? ""} placeholder="Free cancellation up to 24 hours before the start." />
       </Section>
 
-      <Section title="Itinerary" description="The stops of the experience, in order.">
+      <Section title="Itinerary" description="The stops, in order. Add coordinates to show each stop as a numbered pin on the itinerary map.">
         {steps.length === 0 && <p className="text-sm text-stone-500">No steps yet.</p>}
         <ol className="space-y-4">
           {steps.map((s, i) => (
@@ -112,12 +151,18 @@ export function ExperienceForm({
                 <input className="input sm:col-span-2" placeholder="Location" value={s.location} onChange={(ev) => update(s.key, { location: ev.target.value })} />
                 <input className="input" placeholder="Duration (e.g. 45 min)" value={s.duration} onChange={(ev) => update(s.key, { duration: ev.target.value })} />
                 <textarea className="input sm:col-span-3" rows={2} placeholder="Description" value={s.description} onChange={(ev) => update(s.key, { description: ev.target.value })} />
+                <input className="input" type="number" step="any" placeholder="Latitude" aria-label="Stop latitude" value={s.latitude} onChange={(ev) => update(s.key, { latitude: ev.target.value })} />
+                <input className="input" type="number" step="any" placeholder="Longitude" aria-label="Stop longitude" value={s.longitude} onChange={(ev) => update(s.key, { longitude: ev.target.value })} />
+                <select className="input" aria-label="Admission" value={s.admission} onChange={(ev) => update(s.key, { admission: ev.target.value })}>
+                  <option value="">Admission: not specified</option>
+                  {Object.entries(ADMISSION).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
               </div>
             </li>
           ))}
         </ol>
         <button type="button" className="btn-ghost" onClick={() => setSteps((s) => [...s, toStep()])}>+ Add step</button>
-        <input type="hidden" name="steps" value={JSON.stringify(steps.map((s) => ({ title: s.title, description: s.description, location: s.location, duration: s.duration })))} />
+        <input type="hidden" name="steps" value={JSON.stringify(steps.map((s) => ({ title: s.title, description: s.description, location: s.location, duration: s.duration, latitude: s.latitude, longitude: s.longitude, admission: s.admission || null })))} />
       </Section>
 
       <div className="card flex flex-wrap items-center justify-between gap-4 p-6">

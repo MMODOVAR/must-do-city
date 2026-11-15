@@ -56,7 +56,8 @@ Rules of thumb:
 ```
 Country 1─* City 1─* Host
                  1─* Experience *─1 Host, *─1 Category
-                        1─* ExperienceStep
+                        1─* ExperienceStep   (stops; optional lat/lng → itinerary map)
+                        1─* ExperiencePhoto  (gallery)
                         1─* Booking 1─0..1 Review
                         1─* Review
 Admin
@@ -64,6 +65,12 @@ Admin
 
 List-like fields (languages, highlights, included…) are stored as comma/newline-separated text so the schema works on
 SQLite and Postgres alike; `shared/text.ts` parses them.
+
+## Maps
+
+Both maps (landing-page hotspots, experience itinerary) use Leaflet with `shared/map/TileLayerWithFallback`:
+OpenStreetMap tiles by default, Esri as an automatic fallback, or your own provider via `NEXT_PUBLIC_MAP_TILE_URL`.
+Leaflet needs `window`, so map components are loaded with `next/dynamic` and `ssr: false`.
 
 ## Adding a feature
 
