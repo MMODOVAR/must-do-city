@@ -16,8 +16,14 @@ function onlyMissing<T extends Record<string, unknown>>(current: Record<string, 
 }
 
 const DAY = 24 * 3600 * 1000;
-let refCounter = 0;
-const ref = () => `MDC-DEMO${String(++refCounter).padStart(2, "0")}`;
+/** Random booking reference that is not in use yet (safe to re-run the seed). */
+async function freshReference() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  for (;;) {
+    const ref = `MDC-${Array.from({ length: 6 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("")}`;
+    if (!(await prisma.booking.findUnique({ where: { reference: ref }, select: { id: true } }))) return ref;
+  }
+}
 
 async function main() {
   // --- Admin account ---
@@ -140,7 +146,7 @@ async function main() {
             const guests = 2;
             const booking = await prisma.booking.create({
               data: {
-                reference: `${ref()}${exp.id.slice(-3).toUpperCase()}`,
+                reference: await freshReference(),
                 status: "COMPLETED",
                 date,
                 guests,
@@ -175,7 +181,7 @@ async function main() {
       const g = guests[i];
       await prisma.booking.create({
         data: {
-          reference: `MDC-OPEN${i + 1}`,
+          reference: await freshReference(),
           status: g.status,
           date: new Date(Date.now() + (7 + i * 5) * DAY),
           guests: 2,

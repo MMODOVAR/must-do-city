@@ -8,9 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
-    "db:seed": "prisma db seed",
+    "db:seed": "prisma generate && prisma db seed",
     "db:studio": "prisma studio",
-    "setup": "prisma migrate deploy && prisma db seed",
+    "setup": "prisma migrate deploy && prisma generate && prisma db seed",
     "db:migrate": "prisma migrate dev"
   },
   "dependencies": {
