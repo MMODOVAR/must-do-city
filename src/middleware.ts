@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { SESSION_COOKIE, verifySessionToken } from "@/lib/session";
+import { SESSION_COOKIE, verifySessionToken } from "@/modules/identity/session";
 
 // Protect every /admin route except the login page.
 export async function middleware(req: NextRequest) {

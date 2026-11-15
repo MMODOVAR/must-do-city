@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: { default: "Must Do City", template: "%s · Must Do City" },
-  description: "Hand-picked journeys and experiences in cities around the world.",
+  description: "Private experiences hosted by locals in cities around the world.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

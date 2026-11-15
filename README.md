@@ -1,27 +1,33 @@
 # Must Do City
 
-A travel-experience website with an administrator back office. Admins configure **countries → cities → journeys** (experiences), and each journey is an ordered list of **steps** (stops). Visitors browse destinations and follow journeys step by step.
+A marketplace for **private experiences hosted by locals** (in the spirit of withlocals.com).
+Visitors explore an interactive map of hotspots, pick a country and city, browse experiences by category,
+read verified reviews, and send booking requests. Admins manage everything from a back office.
 
-Built with **Next.js 15 (App Router)**, **Prisma 6** (Rust-free client), **SQLite** for local development, and **Tailwind CSS 4**.
+Built with **Next.js 15 (App Router)**, **Prisma 6**, **SQLite** for local development, **Tailwind CSS 4** and **Leaflet** maps.
+The code is organised by business domain — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Features
 
 **Public website**
-- Home page with featured journeys and all destinations
-- Country page → its cities
-- City page → its journeys, with categories
-- Journey page → summary, duration, price and a step-by-step timeline
-- Only *published* content is shown; unpublished items return 404
+- Landing page with an **interactive map** of top hotspots: choose a country → city and the map flies there; ranked hotspot chips; popups with ratings
+- Categories, trending hotspots, featured experiences, local hosts, recent reviews
+- Destinations: country → city pages with experiences, category filters and the city's hosts
+- **Experience search**: text, country, city, category, language, max price, sort, pagination
+- Experience page laid out like a Viator tour page: **photo gallery** with full-screen viewer, badges (Top rated, Free cancellation…),
+  quick facts, overview & highlights, what's included, **meeting point / start time / end point**, **"What to expect" itinerary
+  with numbered stops on a side map** (route line, hover to highlight), additional info, cancellation policy, host,
+  and **reviews** with a clickable rating breakdown, star filter, sorting and "show more"
+- **Booking requests** with live price total (per person / per group) and a booking reference
+- **Verified reviews**: guests review with their booking reference once the experience is completed
+- Host profiles with languages, response time, rating and their experiences
 
 **Admin back office** (`/admin`)
 - Secure login (bcrypt-hashed passwords, signed HTTP-only session cookie, middleware-protected routes)
-- Dashboard with counts and recent changes
-- Create / edit / delete **countries** (name, slug, ISO code, description, image, published)
-- Create / edit / delete **cities** within a country
-- Create / edit / delete **journeys** within a city: category, duration, price & currency, image, featured flag, published flag
-- Inline **steps editor**: add, remove and reorder the stops of a journey
-- Slugs auto-generated from names; duplicate slugs are reported clearly
-- Deleting a country/city cascades to its cities/journeys (with confirmation)
+- Dashboard with pending bookings and recent activity
+- **Bookings** inbox: confirm / decline / cancel / complete (only valid transitions are offered), internal notes
+- CRUD for **experiences** (photo manager, itinerary editor with stop coordinates and admission), **hosts**, **categories**, **cities** (coordinates + hotspot flag) and **countries**
+- **Reviews** moderation: hide/publish, delete, add reviews collected elsewhere
 
 ## Getting started
 
@@ -48,35 +54,34 @@ npm run dev
 | `npm run build` / `npm start` | Production build / serve |
 | `npm run setup` | Apply migrations and seed |
 | `npm run db:migrate` | Create a new migration after editing `prisma/schema.prisma` |
-| `npm run db:seed` | Create the admin user (and sample data if the DB is empty) |
+| `npm run db:seed` | Create the admin user and sample destinations, hosts, experiences and reviews (safe to re-run) |
 | `npm run db:studio` | Browse the database in Prisma Studio |
 
-## Data model
+## Data model & architecture
 
 ```
-Country 1─* City 1─* Journey 1─* JourneyStep
-Admin (back-office users)
+Country 1─* City 1─* Host 1─* Experience 1─* ExperienceStep
+                        Category 1─* Experience 1─* Booking 1─0..1 Review
 ```
 
-See [`prisma/schema.prisma`](prisma/schema.prisma).
+See [`prisma/schema.prisma`](prisma/schema.prisma) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+**Upgrading an existing database:** `npm run setup` applies the new migration, which converts your existing journeys into
+experiences (keeping their steps and categories), then the seed fills in sample hosts, map coordinates and reviews
+without overwriting anything you edited.
 
 ## Project structure
 
 ```
 src/
-  app/
-    (site)/                     public website
-      page.tsx                  home
-      [country]/                country → [city] → [journey]
-    admin/
-      login/                    sign-in page
-      (panel)/                  protected back office (dashboard, countries, cities, journeys)
-      actions.ts                server actions: auth + CRUD
-  components/                   public UI + admin forms
-  lib/                          db client, session/auth, helpers
-  middleware.ts                 protects /admin/*
+  app/                  routes only — (site)/ public pages, admin/(panel)/ back office
+  modules/              one folder per business domain:
+    geography/ hosts/ categories/ experiences/ reviews/ bookings/ explore/ identity/ shared/
+    each with domain.ts · schemas.ts · repository.ts · service.ts · actions.ts · ui/
+  middleware.ts         protects /admin/*
 prisma/
-  schema.prisma, migrations/, seed.ts
+  schema.prisma, migrations/, seed.ts, seed/data.ts
+docs/ARCHITECTURE.md    how the modules fit together
 ```
 
 ## Going to production
@@ -84,13 +89,15 @@ prisma/
 - Set a strong `AUTH_SECRET` and change the admin password.
 - SQLite is fine for a single server. For serverless hosting (e.g. Vercel), use Postgres:
   1. Change `provider = "postgresql"` in `prisma/schema.prisma`
-  2. `npm i @prisma/adapter-pg` and swap `PrismaBetterSQLite3` for `PrismaPg` in `src/lib/db.ts`
-  3. Recreate migrations with `npx prisma migrate dev --name init`
+  2. Recreate migrations with `npx prisma migrate dev --name init`
+- Map tiles default to OpenStreetMap (no API key; falls back to Esri if OSM tiles fail). OSM's public tiles are for light use only, so for real traffic set `NEXT_PUBLIC_MAP_TILE_URL` to your own provider (see `.env.example`).
+- Booking requests are stored and managed in the admin. Sending emails and taking payments are not wired up yet.
 
 ## Ideas / roadmap
 
+- Email notifications for booking requests and status changes
+- Online payments (e.g. Stripe) and host availability calendars
+- Host accounts so locals manage their own experiences
 - Image uploads (instead of image URLs)
-- Multiple admin users & roles
+- Visitor accounts with wishlists
 - Multi-language content
-- Bookings / favourites for visitors
-- Map view of journey steps

@@ -1,12 +1,16 @@
 import Link from "next/link";
-import { requireAdmin } from "@/lib/auth";
-import { logout } from "../actions";
+import { requireAdmin } from "@/modules/identity/auth";
+import { logout } from "@/modules/identity/actions";
 
 const NAV = [
   { href: "/admin", label: "Dashboard" },
-  { href: "/admin/countries", label: "Countries" },
+  { href: "/admin/bookings", label: "Bookings" },
+  { href: "/admin/experiences", label: "Experiences" },
+  { href: "/admin/hosts", label: "Hosts" },
+  { href: "/admin/reviews", label: "Reviews" },
+  { href: "/admin/categories", label: "Categories" },
   { href: "/admin/cities", label: "Cities" },
-  { href: "/admin/journeys", label: "Journeys" },
+  { href: "/admin/countries", label: "Countries" },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

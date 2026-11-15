@@ -1,9 +1,32 @@
-import { prisma } from "../src/lib/db";
+/**
+ * Seed: creates the admin user and sample content.
+ * Idempotent — records are matched by slug, and existing records only get
+ * their EMPTY fields filled, so admin edits are never overwritten.
+ */
 import bcrypt from "bcryptjs";
+import { PrismaClient } from "@prisma/client";
+import { categories, countries, reviewPool, FREE_CANCEL } from "./seed/data";
+import { ADDITIONAL_INFO, cityImages, details } from "./seed/details";
 
+const prisma = new PrismaClient();
+
+/** Keep only the keys whose current value is null/undefined. */
+function onlyMissing<T extends Record<string, unknown>>(current: Record<string, unknown>, wanted: T): Partial<T> {
+  return Object.fromEntries(Object.entries(wanted).filter(([k]) => current[k] === null || current[k] === undefined)) as Partial<T>;
+}
+
+const DAY = 24 * 3600 * 1000;
+/** Random booking reference that is not in use yet (safe to re-run the seed). */
+async function freshReference() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  for (;;) {
+    const ref = `MDC-${Array.from({ length: 6 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("")}`;
+    if (!(await prisma.booking.findUnique({ where: { reference: ref }, select: { id: true } }))) return ref;
+  }
+}
 
 async function main() {
-  // --- Admin account (from env, with dev defaults) ---
+  // --- Admin account ---
   const email = (process.env.ADMIN_EMAIL ?? "admin@mustdocity.local").toLowerCase();
   const password = process.env.ADMIN_PASSWORD ?? "ChangeMe123!";
   await prisma.admin.upsert({
@@ -13,127 +36,168 @@ async function main() {
   });
   console.log(`Admin ready: ${email}`);
 
-  // --- Sample content (only if the DB is empty) ---
-  if ((await prisma.country.count()) > 0) return;
+  // --- Categories ---
+  const categoryIds = new Map<string, string>();
+  for (const c of categories) {
+    const existing = await prisma.category.findUnique({ where: { slug: c.slug } });
+    const row = existing
+      ? await prisma.category.update({ where: { id: existing.id }, data: onlyMissing(existing, { icon: c.icon, description: c.description }) })
+      : await prisma.category.create({ data: c });
+    categoryIds.set(c.slug, row.id);
+  }
 
-  await prisma.country.create({
-    data: {
-      name: "Lebanon",
-      slug: "lebanon",
-      isoCode: "LB",
-      description: "Mountains, Mediterranean coast and some of the oldest cities on earth.",
-      cities: {
-        create: [
-          {
-            name: "Beirut",
-            slug: "beirut",
-            description: "A city of layers — Roman ruins, Ottoman houses and a restless nightlife.",
-            journeys: {
-              create: [
-                {
-                  title: "Beirut Food Walk",
-                  slug: "beirut-food-walk",
-                  summary: "Mezze, manousheh and knefeh through Mar Mikhael and Gemmayzeh.",
-                  category: "Food & Drink",
-                  durationHours: 3.5,
-                  price: 45,
-                  featured: true,
-                  steps: {
-                    create: [
-                      { order: 1, title: "Breakfast manousheh", location: "Mar Mikhael", duration: "30 min",
-                        description: "Za'atar and cheese flatbread straight from the oven." },
-                      { order: 2, title: "Gemmayzeh stairs", location: "St. Nicholas Stairs", duration: "40 min",
-                        description: "Walk the art stairs and stop for fresh juice." },
-                      { order: 3, title: "Knefeh finale", location: "Downtown", duration: "30 min",
-                        description: "Warm cheese pastry with orange-blossom syrup." },
-                    ],
-                  },
-                },
-                {
-                  title: "Corniche Sunset",
-                  slug: "corniche-sunset",
-                  summary: "Stroll the seafront to Raouché's Pigeon Rocks at golden hour.",
-                  category: "Nature",
-                  durationHours: 2,
-                  price: 0,
-                  steps: {
-                    create: [
-                      { order: 1, title: "Ain el-Mreisseh", duration: "45 min", description: "Start where the fishermen gather." },
-                      { order: 2, title: "Pigeon Rocks", location: "Raouché", duration: "45 min", description: "Watch the sun drop behind the arches." },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-          {
-            name: "Byblos",
-            slug: "byblos",
-            description: "One of the oldest continuously inhabited cities in the world.",
-            journeys: {
-              create: [
-                {
-                  title: "Ancient Byblos",
-                  slug: "ancient-byblos",
-                  summary: "Crusader castle, Phoenician temples and the old souk.",
-                  category: "History",
-                  durationHours: 4,
-                  price: 30,
-                  featured: true,
-                  steps: {
-                    create: [
-                      { order: 1, title: "Crusader Castle", duration: "1 h" },
-                      { order: 2, title: "Old Souk", duration: "1 h" },
-                      { order: 3, title: "Fish lunch at the port", duration: "1.5 h" },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-  });
+  let poolIndex = 0;
+  for (const country of countries) {
+    const countryData = { name: country.name, isoCode: country.iso, description: country.description, latitude: country.lat, longitude: country.lng };
+    const existingCountry = await prisma.country.findUnique({ where: { slug: country.slug } });
+    const countryRow = existingCountry
+      ? await prisma.country.update({ where: { id: existingCountry.id }, data: onlyMissing(existingCountry, countryData) })
+      : await prisma.country.create({ data: { slug: country.slug, ...countryData } });
 
-  await prisma.country.create({
-    data: {
-      name: "France",
-      slug: "france",
-      isoCode: "FR",
-      description: "Art, food and villages that look like paintings.",
-      cities: {
-        create: [
-          {
-            name: "Paris",
-            slug: "paris",
-            description: "The city of light, best explored on foot.",
-            journeys: {
-              create: [
-                {
-                  title: "Montmartre Morning",
-                  slug: "montmartre-morning",
-                  summary: "Croissants, painters and the view from Sacré-Cœur.",
-                  category: "Culture",
-                  durationHours: 3,
-                  price: 25,
-                  currency: "EUR",
-                  steps: {
-                    create: [
-                      { order: 1, title: "Boulangerie stop", location: "Rue des Abbesses", duration: "20 min" },
-                      { order: 2, title: "Place du Tertre", duration: "45 min" },
-                      { order: 3, title: "Sacré-Cœur steps", duration: "45 min" },
-                    ],
-                  },
-                },
-              ],
-            },
+    for (const city of country.cities) {
+      const cityData = { name: city.name, tagline: city.tagline, description: city.description, latitude: city.lat, longitude: city.lng, imageUrl: cityImages[city.slug] ?? null };
+      const existingCity = await prisma.city.findUnique({ where: { countryId_slug: { countryId: countryRow.id, slug: city.slug } } });
+      const cityRow = existingCity
+        ? await prisma.city.update({
+            where: { id: existingCity.id },
+            data: { ...onlyMissing(existingCity, cityData), ...(city.hotspot && existingCity.latitude === null ? { isHotspot: true } : {}) },
+          })
+        : await prisma.city.create({ data: { slug: city.slug, countryId: countryRow.id, isHotspot: !!city.hotspot, ...cityData } });
+
+      const hostIds = new Map<string, string>();
+      for (const h of city.hosts) {
+        const row = await prisma.host.upsert({
+          where: { slug: h.slug },
+          update: {},
+          create: {
+            ...h,
+            verified: !!h.verified,
+            cityId: cityRow.id,
+            memberSince: new Date(Date.now() - (400 + h.name.length * 37) * DAY),
           },
-        ],
-      },
-    },
-  });
-  console.log("Sample countries, cities and journeys created.");
+        });
+        hostIds.set(h.slug, row.id);
+      }
+
+      for (const x of city.experiences) {
+        const fields = {
+          title: x.title,
+          summary: x.summary,
+          description: x.description ?? null,
+          durationHours: x.durationHours,
+          price: x.price,
+          maxGroupSize: x.maxGroupSize ?? null,
+          languages: x.languages,
+          highlights: x.highlights.join("\n"),
+          included: x.included.join("\n"),
+          notIncluded: x.notIncluded?.join("\n") ?? null,
+          meetingPoint: x.meetingPoint,
+          latitude: details[x.slug]?.meeting[0] ?? null,
+          longitude: details[x.slug]?.meeting[1] ?? null,
+          startTime: details[x.slug]?.startTime ?? null,
+          endPoint: details[x.slug]?.endPoint ?? null,
+          additionalInfo: ADDITIONAL_INFO.join("\n"),
+          imageUrl: details[x.slug]?.photos?.[0]?.url ?? null,
+          cancellationPolicy: FREE_CANCEL,
+          hostId: hostIds.get(x.host) ?? null,
+          categoryId: categoryIds.get(x.category) ?? null,
+        };
+        const existing = await prisma.experience.findUnique({ where: { slug: x.slug }, include: { _count: { select: { steps: true, reviews: true, photos: true } }, steps: true } });
+        const exp = existing
+          ? await prisma.experience.update({ where: { id: existing.id }, data: onlyMissing(existing, fields) })
+          : await prisma.experience.create({
+              data: { slug: x.slug, cityId: cityRow.id, pricingType: x.pricingType ?? "PER_PERSON", featured: !!x.featured, ...fields },
+            });
+
+        if (!existing || existing._count.steps === 0) {
+          await prisma.experienceStep.createMany({
+            data: x.steps.map(([title, location, duration, description, latitude, longitude, admission], i) => ({
+              experienceId: exp.id, order: i + 1, title, location, duration, description,
+              latitude: latitude ?? null, longitude: longitude ?? null, admission: admission ?? null,
+            })),
+          });
+        } else {
+          // Existing stops: only fill in missing map coordinates / admission, matched by title.
+          for (const step of existing.steps) {
+            const seed = x.steps.find(([title]) => title === step.title);
+            if (!seed) continue;
+            const [, , , , latitude, longitude, admission] = seed;
+            await prisma.experienceStep.update({
+              where: { id: step.id },
+              data: onlyMissing(step, { latitude: latitude ?? null, longitude: longitude ?? null, admission: admission ?? null }),
+            });
+          }
+        }
+
+        const photos = details[x.slug]?.photos ?? [];
+        if (photos.length && (!existing || existing._count.photos === 0)) {
+          await prisma.experiencePhoto.createMany({
+            data: photos.map((ph, i) => ({ experienceId: exp.id, order: i + 1, url: ph.url, caption: ph.caption ?? null })),
+          });
+        }
+
+        // Verified reviews: each one comes from a completed booking.
+        if (!existing || existing._count.reviews === 0) {
+          const howMany = 2 + (x.slug.length % 3);
+          const ratings: number[] = [];
+          for (let i = 0; i < howMany; i++) {
+            const r = reviewPool[poolIndex++ % reviewPool.length];
+            const date = new Date(Date.now() - (20 + i * 23) * DAY);
+            const guests = 2;
+            const booking = await prisma.booking.create({
+              data: {
+                reference: await freshReference(),
+                status: "COMPLETED",
+                date,
+                guests,
+                totalPrice: x.pricingType === "PER_GROUP" ? x.price : x.price * guests,
+                currency: exp.currency,
+                guestName: r.name,
+                guestEmail: `${r.name.toLowerCase()}@example.com`,
+                experienceId: exp.id,
+              },
+            });
+            await prisma.review.create({
+              data: { experienceId: exp.id, bookingId: booking.id, rating: r.rating, title: r.title, comment: r.comment, authorName: r.name, authorCountry: r.country, createdAt: new Date(date.getTime() + DAY) },
+            });
+            ratings.push(r.rating);
+          }
+          const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+          await prisma.experience.update({ where: { id: exp.id }, data: { ratingAverage: Math.round(avg * 100) / 100, reviewCount: ratings.length } });
+        }
+      }
+    }
+  }
+
+  // --- A few open booking requests so the admin inbox isn't empty ---
+  if ((await prisma.booking.count({ where: { status: { in: ["PENDING", "CONFIRMED"] } } })) === 0) {
+    const picks = await prisma.experience.findMany({ where: { featured: true }, take: 3 });
+    const guests = [
+      { name: "Olivia Smith", email: "olivia@example.com", status: "PENDING", msg: "We're vegetarian — is that OK?" },
+      { name: "Kenji Watanabe", email: "kenji@example.com", status: "PENDING", msg: null },
+      { name: "Clara Müller", email: "clara@example.com", status: "CONFIRMED", msg: "Celebrating our anniversary!" },
+    ];
+    for (const [i, e] of picks.entries()) {
+      const g = guests[i];
+      await prisma.booking.create({
+        data: {
+          reference: await freshReference(),
+          status: g.status,
+          date: new Date(Date.now() + (7 + i * 5) * DAY),
+          guests: 2,
+          totalPrice: e.price === null ? null : e.pricingType === "PER_GROUP" ? e.price : e.price * 2,
+          currency: e.currency,
+          guestName: g.name,
+          guestEmail: g.email,
+          message: g.msg,
+          experienceId: e.id,
+        },
+      });
+    }
+  }
+
+  const counts = await Promise.all([prisma.country.count(), prisma.city.count(), prisma.host.count(), prisma.experience.count(), prisma.review.count()]);
+  console.log(`Sample content ready: ${counts[0]} countries, ${counts[1]} cities, ${counts[2]} hosts, ${counts[3]} experiences, ${counts[4]} reviews.`);
 }
 
 main()

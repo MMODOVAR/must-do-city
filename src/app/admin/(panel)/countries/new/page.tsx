@@ -1,6 +1,6 @@
-import { saveCountry } from "@/app/admin/actions";
-import { CountryForm } from "@/components/admin/CountryForm";
-import { PageHeader } from "@/components/admin/PageHeader";
+import { PageHeader } from "@/modules/shared/admin/PageHeader";
+import { saveCountry } from "@/modules/geography/actions";
+import { CountryForm } from "@/modules/geography/ui/CountryForm";
 
 export default function NewCountryPage() {
   return (

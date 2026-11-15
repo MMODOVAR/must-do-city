@@ -1,22 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { prisma } from "@/lib/db";
-import { deleteCountry, saveCountry } from "@/app/admin/actions";
-import { CountryForm } from "@/components/admin/CountryForm";
-import { PageHeader, StatusPill } from "@/components/admin/PageHeader";
-import { DeleteButton } from "@/components/admin/ui";
+import { PageHeader, StatusPill } from "@/modules/shared/admin/PageHeader";
+import { ConfirmButton } from "@/modules/shared/admin/ui";
+import { deleteCountry, saveCountry } from "@/modules/geography/actions";
+import { geographyService } from "@/modules/geography/service";
+import { CountryForm } from "@/modules/geography/ui/CountryForm";
 
 export default async function EditCountryPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const country = await prisma.country.findUnique({
-    where: { id },
-    include: { cities: { orderBy: { name: "asc" }, include: { _count: { select: { journeys: true } } } } },
-  });
+  const country = await geographyService.adminCountry((await params).id);
   if (!country) notFound();
 
   return (
     <>
-      <PageHeader title={country.name} subtitle={`/${country.slug}`} back={{ href: "/admin/countries", label: "Countries" }} />
+      <PageHeader title={country.name} subtitle={`/destinations/${country.slug}`} back={{ href: "/admin/countries", label: "Countries" }} />
       <CountryForm action={saveCountry.bind(null, country.id)} country={country} />
 
       <div className="mb-3 mt-10 flex items-center justify-between">
@@ -27,20 +23,15 @@ export default async function EditCountryPage({ params }: { params: Promise<{ id
         {country.cities.length === 0 && <p className="p-5 text-sm text-stone-500">No cities yet.</p>}
         {country.cities.map((c) => (
           <Link key={c.id} href={`/admin/cities/${c.id}`} className="flex items-center justify-between p-4 text-sm hover:bg-stone-50">
-            <span className="font-medium">{c.name}</span>
-            <span className="flex items-center gap-3 text-stone-500">
-              {c._count.journeys} journeys <StatusPill published={c.published} />
-            </span>
+            <span className="font-medium">{c.name} {c.isHotspot && <span className="text-xs text-clay">🔥 hotspot</span>}</span>
+            <StatusPill published={c.published} />
           </Link>
         ))}
       </div>
 
       <div className="mt-10 border-t border-stone-200 pt-6">
-        <DeleteButton
-          action={deleteCountry.bind(null, country.id)}
-          label="Delete country"
-          warning={`Delete ${country.name}? This also deletes all its cities and journeys.`}
-        />
+        <ConfirmButton action={deleteCountry.bind(null, country.id)} label="Delete country"
+          warning={`Delete ${country.name}? This also deletes all its cities, hosts and experiences.`} />
       </div>
     </>
   );
